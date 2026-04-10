@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumin - Rádio Inteligente</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --accent: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: var(--card);
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-family: 'Comfortaa', cursive;
+            font-size: 1.8rem;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .status-panel {
+            display: flex;
+            gap: 2rem;
+            background: #f1f5f9;
+            padding: 0.75rem 1.5rem;
+            border-radius: 99px;
+            font-weight: 600;
+        }
+
+        .status-item span { color: var(--primary); margin-right: 0.5rem; }
+        .status-item b { color: var(--accent); }
+
+        main {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        h2 { margin-bottom: 1rem; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            resize: none;
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .playlist {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .playlist-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .playlist-item:hover { background: #f8fafc; }
+        .playlist-item.active { border-left: 4px solid var(--primary); background: #eff6ff; }
+
+        .btn-play {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.4rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .controls {
+            padding: 2rem;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .main-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1.25rem 3rem;
+            border-radius: 1rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        }
+
+        .main-btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .main-btn.active { background: #ef4444; box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3); }
+
+        .stop-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .now-playing { font-size: 0.9rem; color: #64748b; }
+
+        @media (max-width: 768px) {
+            main { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">Lumin</div>
+    <div class="status-panel">
+        <div class="status-item">Status: <b id="ui-status">Aguardando</b></div>
+        <div class="status-item">Cronômetro: <b id="ui-timer">00:00</b></div>
+    </div>
+</header>
+
+<main>
+    <div class="card">
+        <h2>📋 Ofertas Armazém da Gula</h2>
+        <textarea id="texto-ofertas">Promoção do dia no Armazém da Gula! 
+Arroz Tio João 5kg por apenas 22 reais e 90 centavos.
+Feijão Carioca tipo 1, apenas 6 reais e 50 centavos.
+Venha conferir nossas ofertas de hortifruti, tudo fresquinho para sua família!</textarea>
+    </div>
+
+    <div class="card">
+        <h2>🎵 Seleção de Músicas Lumin</h2>
+        <ul class="playlist" id="ui-playlist">
+            <!-- Playlist carregada via JS -->
+        </ul>
+        <div style="margin-top: 1.5rem; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+            <p class="now-playing">Tocando agora: <span id="ui-current-track">Nenhuma</span></p>
+        </div>
+    </div>
+</main>
+
+<div class="controls">
+    <button id="btn-main" class="main-btn" onclick="toggleRadio()">ATIVAR RÁDIO LUMIN</button>
+    <button class="stop-btn" onclick="stopRadio()">Parar Sistema</button>
+</div>
+
+<audio id="audio-player"></audio>
+
+<script>
+    // Configurações e Dados Fixos
+    const playlist = [
+        { id: 1, title: "Lumin Vibes Gold", artist: "SoundHelix", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+        { id: 2, title: "Smooth Retail Mix", artist: "SoundHelix", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+        { id: 3, title: "Smart Store Beats", artist: "SoundHelix", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
+    ];
+
+    let currentTrackIndex = 0;
+    let isRunning = false;
+    let timerInterval = null;
+    let cycleTimeout = null;
+    let seconds = 0;
+    let songCount = 0;
+
+    const audio = document.getElementById('audio-player');
+    const btnMain = document.getElementById('btn-main');
+    const uiStatus = document.getElementById('ui-status');
+    const uiTimer = document.getElementById('ui-timer');
+    const uiPlaylist = document.getElementById('ui-playlist');
+    const uiCurrentTrack = document.getElementById('ui-current-track');
+    const textoOfertas = document.getElementById('texto-ofertas');
+
+    // Inicializar Playlist na UI
+    function initPlaylist() {
+        uiPlaylist.innerHTML = playlist.map((song, index) => `
+            <li class="playlist-item" onclick="selectTrack(${index})">
+                <div>
+                    <strong>${song.title}</strong><br>
+                    <small>${song.artist}</small>
+                </div>
+                <button class="btn-play">Tocar</button>
+            </li>
+        `).join('');
+    }
+
+    function selectTrack(index) {
+        currentTrackIndex = index;
+        const song = playlist[index];
+        audio.src = song.url;
+        uiCurrentTrack.innerText = song.title;
+        
+        // Atualiza visual da lista
+        document.querySelectorAll('.playlist-item').forEach((item, i) => {
+            item.classList.toggle('active', i === index);
+        });
+
+        if (isRunning) audio.play();
+    }
+
+    // Lógica de Volume (Fade)
+    function fadeVolume(target, duration = 2000) {
+        const step = 0.05;
+        const interval = duration / (Math.abs(audio.volume - target) / step);
+        
+        const fader = setInterval(() => {
+            if (audio.volume < target) {
+                audio.volume = Math.min(audio.volume + step, target);
+            } else {
+                audio.volume = Math.max(audio.volume - step, target);
+            }
+            
+            if (audio.volume === target) clearInterval(fader);
+        }, 50);
+    }
+
+    // Motor de Locução (Speech Synthesis)
+    function speak(text, duration, nextCallback) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = 0.9;
+        
+        window.speechSynthesis.speak(utterance);
+        
+        // Timer visual para a fase
+        startCountdown(duration, nextCallback);
+    }
+
+    function startCountdown(duration, callback) {
+        seconds = duration;
+        clearInterval(timerInterval);
+        
+        timerInterval = setInterval(() => {
+            seconds--;
+            uiTimer.innerText = `00:${seconds.toString().padStart(2, '0')}`;
+            
+            if (seconds <= 0) {
+                clearInterval(timerInterval);
+                if (callback) callback();
+            }
+        }, 1000);
+    }
+
+    // Ciclo de Automação
+    function startCycle() {
+        if (!isRunning) return;
+
+        songCount = 0;
+        uiStatus.innerText = "Fase: Institucional";
+        fadeVolume(0.1);
+
+        // Fase 1: Institucional (20s)
+        speak("Você está ouvindo a Rádio Lumin, a inteligência que move o seu negócio. No Armazém da Gula, a qualidade vem sempre em primeiro lugar. Sinta-se em casa enquanto aproveita nossas ofertas exclusivas preparadas especialmente para você.", 20, () => {
+            
+            // Fase 2: Ofertas (40s)
+            uiStatus.innerText = "Fase: Ofertas";
+            speak(textoOfertas.value, 40, () => {
+                
+                // Fase 3: Agradecimento (10s)
+                uiStatus.innerText = "Fase: Agradecimento";
+                speak("Lumin: Tecnologia e economia para o seu dia a dia. Obrigado pela preferência e ótimas compras!", 10, () => {
+                    
+                    // Fase 4: Música (Tocar 2 músicas)
+                    uiStatus.innerText = "Música: 1 de 2";
+                    fadeVolume(0.4);
+                    startMusicMonitoring();
+                });
+            });
+        });
+    }
+
+    function startMusicMonitoring() {
+        uiTimer.innerText = "AUTO";
+        audio.onended = () => {
+            songCount++;
+            if (songCount < 2) {
+                uiStatus.innerText = `Música: 2 de 2`;
+                nextTrack();
+            } else {
+                startCycle(); // Reinicia o ciclo de locução
+            }
+        };
+    }
+
+    function nextTrack() {
+        currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+        selectTrack(currentTrackIndex);
+        audio.play();
+    }
+
+    function toggleRadio() {
+        if (isRunning) {
+            stopRadio();
+        } else {
+            isRunning = true;
+            btnMain.innerText = "PARAR RÁDIO LUMIN";
+            btnMain.classList.add('active');
+            selectTrack(currentTrackIndex);
+            audio.play();
+            startCycle();
+        }
+    }
+
+    function stopRadio() {
+        isRunning = false;
+        window.speechSynthesis.cancel();
+        audio.pause();
+        audio.currentTime = 0;
+        clearInterval(timerInterval);
+        
+        btnMain.innerText = "ATIVAR RÁDIO LUMIN";
+        btnMain.classList.remove('active');
+        uiStatus.innerText = "Aguardando";
+        uiTimer.innerText = "00:00";
+    }
+
+    // Inicialização
+    initPlaylist();
+    selectTrack(0);
+    audio.volume = 0.4;
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumin - Rádio Inteligente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        header {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-family: 'Comfortaa', cursive;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .status-panel {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            gap: 40px;
+            border-top: 4px solid var(--primary);
+        }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 12px; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+        .stat-value { font-size: 20px; font-weight: 700; color: var(--primary); }
+
+        main {
+            width: 100%;
+            max-width: 900px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        h2 { font-size: 16px; margin-bottom: 15px; color: #475569; }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        .music-list {
+            height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .music-item {
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .music-item:hover { background: #eff6ff; }
+        
+        .controls {
+            grid-column: span 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn-activate {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+        }
+        .btn-activate:hover { transform: scale(1.05); background: #1d4ed8; }
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #now-playing { font-size: 14px; color: #64748b; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Lumin</div>
+        <div class="status-panel">
+            <div class="stat-item">
+                <div class="stat-label">Fase Atual</div>
+                <div id="status-fase" class="stat-value">Aguardando</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Cronômetro</div>
+                <div id="timer" class="stat-value">00:00</div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>Ofertas Armazém da Gula</h2>
+            <textarea id="texto-ofertas">Promoção do dia: Arroz Tipo 1 - R$ 19,90. Feijão Carioca - R$ 7,50. Açúcar Refinado - R$ 3,90. Venha conferir as melhores ofertas no Armazém da Gula!</textarea>
+        </div>
+
+        <div class="card">
+            <h2>Playlist da Rádio</h2>
+            <div id="playlist-container" class="music-list">
+                <!-- Músicas inseridas via JS -->
+            </div>
+            <p id="now-playing" style="margin-top: 10px;">Parado</p>
+        </div>
+
+        <div class="controls">
+            <button id="btn-start" class="btn-activate" onclick="iniciarRadio()">ATIVAR RÁDIO LUMIN</button>
+            <button id="btn-stop" class="btn-stop" onclick="pararRadio()" style="display: none;">PARAR</button>
+        </div>
+    </main>
+
+    <audio id="audio-player"></audio>
+
+    <script>
+        // Configurações
+        var playlist = [
+            { title: "Música 1 (Suave)", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+            { title: "Música 2 (Moderno)", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+            { title: "Música 3 (Ambiente)", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" }
+        ];
+
+        var audio = document.getElementById('audio-player');
+        var timerDisplay = document.getElementById('timer');
+        var statusFase = document.getElementById('status-fase');
+        var nowPlaying = document.getElementById('now-playing');
+        var btnStart = document.getElementById('btn-start');
+        var btnStop = document.getElementById('btn-stop');
+
+        var musicaIndex = 0;
+        var musicasTocadasNoCiclo = 0;
+        var tempoRestante = 0;
+        var intervaloGlobal = null;
+        var faseAtual = "parado"; // institucional, ofertas, agradecimento, musica
+
+        // Inicializar Lista
+        function renderPlaylist() {
+            var container = document.getElementById('playlist-container');
+            container.innerHTML = '';
+            playlist.forEach(function(item, index) {
+                var div = document.createElement('div');
+                div.className = 'music-item';
+                div.innerHTML = '<span>' + item.title + '</span> <span>▶</span>';
+                div.onclick = function() { tocarMusica(index); };
+                container.appendChild(div);
+            });
+        }
+        renderPlaylist();
+
+        function fadeVolume(target, duration) {
+            var start = audio.volume;
+            var step = (target - start) / (duration / 50);
+            var timer = setInterval(function() {
+                start += step;
+                if ((step > 0 && start >= target) || (step < 0 && start <= target)) {
+                    audio.volume = target;
+                    clearInterval(timer);
+                } else {
+                    audio.volume = start;
+                }
+            }, 50);
+        }
+
+        function falar(texto, callback) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                var msg = new SpeechSynthesisUtterance(texto);
+                msg.lang = 'pt-BR';
+                msg.onend = callback;
+                window.speechSynthesis.speak(msg);
+            } else {
+                // Se não suportar fala, apenas espera o tempo
+                setTimeout(callback, 2000);
+            }
+        }
+
+        function iniciarCicloLocucao() {
+            musicasTocadasNoCiclo = 0;
+            faseAtual = "institucional";
+            statusFase.innerText = "Institucional";
+            tempoRestante = 20;
+            
+            fadeVolume(0.1, 1000);
+            
+            falar("Você está ouvindo a Rádio Lumin, a voz inteligente do Armazém da Gula. Qualidade e tecnologia em sintonia com você.", function() {
+                // Transição para Ofertas após o tempo de 20s acabar ou fala terminar
+            });
+        }
+
+        function proximaFase() {
+            if (faseAtual === "institucional") {
+                faseAtual = "ofertas";
+                statusFase.innerText = "Ofertas";
+                tempoRestante = 40;
+                var texto = document.getElementById('texto-ofertas').value;
+                falar(texto);
+            } 
+            else if (faseAtual === "ofertas") {
+                faseAtual = "agradecimento";
+                statusFase.innerText = "Agradecimento";
+                tempoRestante = 10;
+                falar("Armazém da Gula e Rádio Lumin agradecem a sua preferência. Continue com a gente!");
+            }
+            else if (faseAtual === "agradecimento") {
+                faseAtual = "musica";
+                statusFase.innerText = "Música";
+                tempoRestante = 0;
+                fadeVolume(0.4, 1000);
+            }
+        }
+
+        function tocarMusica(index) {
+            musicaIndex = index % playlist.length;
+            audio.src = playlist[musicaIndex].url;
+            audio.volume = (faseAtual === "musica") ? 0.4 : 0.1;
+            audio.play();
+            nowPlaying.innerText = "Tocando: " + playlist[musicaIndex].title;
+        }
+
+        audio.onended = function() {
+            if (faseAtual === "musica") {
+                musicasTocadasNoCiclo++;
+                if (musicasTocadasNoCiclo >= 2) {
+                    iniciarCicloLocucao();
+                } else {
+                    tocarMusica(musicaIndex + 1);
+                }
+            } else {
+                tocarMusica(musicaIndex + 1);
+            }
+        };
+
+        function iniciarRadio() {
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'block';
+            
+            tocarMusica(0);
+            iniciarCicloLocucao();
+
+            if (intervaloGlobal) clearInterval(intervaloGlobal);
+            intervaloGlobal = setInterval(function() {
+                if (tempoRestante > 0) {
+                    tempoRestante--;
+                    var min = Math.floor(tempoRestante / 60);
+                    var sec = tempoRestante % 60;
+                    timerDisplay.innerText = (min < 10 ? "0"+min : min) + ":" + (sec < 10 ? "0"+sec : sec);
+                    
+                    if (tempoRestante === 0) {
+                        proximaFase();
+                    }
+                } else if (faseAtual === "musica") {
+                    var cur = Math.floor(audio.currentTime);
+                    var m = Math.floor(cur / 60);
+                    var s = cur % 60;
+                    timerDisplay.innerText = (m < 10 ? "0"+m : m) + ":" + (s < 10 ? "0"+s : s);
+                }
+            }, 1000);
+        }
+
+        function pararRadio() {
+            btnStart.style.display = 'block';
+            btnStop.style.display = 'none';
+            audio.pause();
+            audio.src = "";
+            window.speechSynthesis.cancel();
+            clearInterval(intervaloGlobal);
+            statusFase.innerText = "Aguardando";
+            timerDisplay.innerText = "00:00";
+            nowPlaying.innerText = "Parado";
+            faseAtual = "parado";
+        }
+    </script>
+</body>
+</html>
