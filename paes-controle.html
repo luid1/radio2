@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumin — Gestão Armazém da Gula</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'DM Sans', sans-serif; background-color: #F9FAFB; color: #111827; overflow-x: hidden; }
+        .font-comfortaa { font-family: 'Comfortaa', cursive; }
+        .glass-card { background: white; border: 1px solid #E5E7EB; box-shadow: 0 4px 20px rgba(0,0,0,0.03); }
+        
+        /* Loading Spinner */
+        #loadingOverlay {
+            display: none; position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px); z-index: 9999; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #000;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Estilo Login */
+        #loginScreen {
+            position: fixed; inset: 0; background: #F9FAFB; z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .drop-area { border: 2px dashed #E5E7EB; transition: all 0.3s ease; cursor: pointer; }
+        .drop-area.active { border-color: #000; background: #F0FDF4; }
+        #mainContent { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="w-full max-w-sm p-8 text-center">
+            <h1 class="font-comfortaa font-bold text-4xl mb-2">Lumin</h1>
+            <p class="text-[10px] uppercase tracking-[4px] text-gray-400 font-bold mb-10">Acesso Restrito</p>
+            
+            <div class="space-y-4">
+                <input type="text" id="user" placeholder="Usuário" class="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:border-black transition-all">
+                <input type="password" id="pass" placeholder="Senha" class="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:border-black transition-all">
+                <button onclick="checkLogin()" class="w-full bg-black text-white p-4 rounded-2xl font-bold hover:bg-zinc-800 transition-all">Entrar</button>
+                <p id="loginError" class="text-red-500 text-xs font-bold hidden">Usuário ou senha incorretos</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay">
+        <div class="spinner mb-4"></div>
+        <p class="font-bold text-[10px] uppercase tracking-widest text-zinc-500">Sincronizando Banco de Dados...</p>
+    </div>
+
+    <div id="mainContent" class="p-4 sm:p-10">
+        <div class="max-w-5xl mx-auto space-y-8">
+            
+            <header class="flex justify-between items-center">
+                <div>
+                    <h1 class="font-comfortaa font-bold text-3xl tracking-tighter">Lumin</h1>
+                    <p class="text-[10px] uppercase tracking-[3px] text-gray-400 font-bold">Armazém da Gula kg</p>
+                </div>
+                <div class="text-right">
+                    <button onclick="logout()" class="text-[10px] font-bold text-gray-300 hover:text-red-500 uppercase mr-4">Sair</button>
+                    <span class="text-[10px] font-bold bg-black text-white px-3 py-1 rounded-full uppercase tracking-tighter">Mês Vigente</span>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-card p-6 rounded-3xl"><p class="text-[10px] font-bold text-gray-400 uppercase">Recebidos</p><p class="text-2xl font-bold" id="dashV">0</p></div>
+                <div class="glass-card p-6 rounded-3xl"><p class="text-[10px] font-bold text-gray-400 uppercase">Perdas</p><p class="text-2xl font-bold text-red-500" id="dashP">0</p></div>
+                <div class="glass-card p-6 rounded-3xl"><p class="text-[10px] font-bold text-gray-400 uppercase">Líquido</p><p class="text-2xl font-bold text-amber-600" id="dashL">0</p></div>
+                <div class="glass-card p-6 rounded-3xl bg-black text-white"><p class="text-[10px] font-bold text-gray-500 uppercase">A Pagar (Mês)</p><p class="text-2xl font-bold" id="dashT">R$ 0,00</p></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 glass-card rounded-[2.5rem] p-8 sm:p-12 flex flex-col justify-center">
+                    <div class="mb-6 flex justify-between items-center">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Entrada Rápida</span>
+                        <input type="date" id="inputData" class="text-xs font-bold bg-gray-100 p-2 rounded-lg outline-none">
+                    </div>
+                    <p id="pergunta" class="text-2xl sm:text-3xl font-bold text-left mb-8">Quantos pães <strong>vieram</strong>?</p>
+                    <div class="flex gap-3 w-full">
+                        <input type="number" id="inputChat" class="w-full bg-gray-100 p-5 rounded-2xl text-2xl outline-none focus:ring-2 focus:ring-black" placeholder="0">
+                        <button onclick="proximo()" class="bg-black text-white px-10 rounded-2xl font-bold">OK</button>
+                    </div>
+                </div>
+
+                <div id="dropZone" class="drop-area rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center bg-white">
+                    <p class="text-xs font-bold uppercase tracking-tighter text-gray-400">Arraste Excel Aqui</p>
+                    <input type="file" id="fileInp" class="hidden" accept=".xlsx, .xls, .csv">
+                    <button onclick="document.getElementById('fileInp').click()" class="mt-4 text-[9px] font-bold border px-6 py-2 rounded-full uppercase hover:bg-black hover:text-white transition-all">Upload</button>
+                </div>
+            </div>
+
+            <section class="glass-card rounded-[2.5rem] overflow-hidden">
+                <div class="p-8 border-b border-gray-50 flex justify-between items-center bg-white">
+                    <select id="filtroMes" onchange="render()" class="font-bold text-xs bg-transparent outline-none cursor-pointer">
+                        <option value="">Histórico Completo</option>
+                        <option value="0">Janeiro</option><option value="1">Fevereiro</option>
+                        <option value="2">Março</option><option value="3">Abril</option>
+                        <option value="4">Maio</option>
+                    </select>
+                    <button onclick="exportar()" class="text-[10px] font-bold text-zinc-400 hover:text-black uppercase tracking-widest">Exportar Excel</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50/50 text-[10px] font-bold text-gray-400 uppercase">
+                            <tr><th class="p-6">Data</th><th class="p-6">Vieram</th><th class="p-6">Perdas</th><th class="p-6">Subtotal</th><th class="p-6"></th></tr>
+                        </thead>
+                        <tbody id="corpoTabela" class="divide-y divide-gray-50"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <footer class="py-12 text-right">
+                <h2 class="font-comfortaa font-bold text-2xl">Lumin</h2>
+                <p class="text-[9px] uppercase tracking-[4px] text-gray-300 font-bold -mt-1">armazém da gula kg</p>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        const PRECO = 2.50;
+        let db = [];
+        let passo = 0, vTemp = 0;
+
+        // --- SISTEMA DE LOGIN ---
+        function checkLogin() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            const error = document.getElementById('loginError');
+
+            if(u === 'admin' && p === '1234') {
+                sessionStorage.setItem('lumin_auth', 'true');
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                initDB();
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('lumin_auth');
+            location.reload();
+        }
+
+        window.onload = () => {
+            if(sessionStorage.getItem('lumin_auth') === 'true') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                initDB();
+            }
+        };
+
+        // --- BANCO DE DADOS (INDEXEDDB) ---
+        let dbInstance;
+        function initDB() {
+            const request = indexedDB.open("LuminDB", 1);
+            request.onupgradeneeded = e => e.target.result.createObjectStore("paes", { keyPath: "id" });
+            request.onsuccess = e => {
+                dbInstance = e.target.result;
+                loadFromDB();
+            };
+        }
+
+        function loadFromDB() {
+            const tx = dbInstance.transaction("paes", "readonly");
+            const store = tx.objectStore("paes");
+            const getAll = store.getAll();
+            getAll.onsuccess = () => {
+                db = getAll.result;
+                render();
+            };
+        }
+
+        function saveToDB(item) {
+            const tx = dbInstance.transaction("paes", "readwrite");
+            tx.objectStore("paes").put(item);
+        }
+
+        function deleteFromDB(id) {
+            const tx = dbInstance.transaction("paes", "readwrite");
+            tx.objectStore("paes").delete(id);
+        }
+
+        // --- LÓGICA DO CHAT ---
+        document.getElementById('inputData').valueAsDate = new Date();
+
+        function proximo() {
+            const inp = document.getElementById('inputChat');
+            const dataSel = document.getElementById('inputData').value;
+            const val = parseFloat(inp.value);
+            if (isNaN(val) || val < 0) return;
+
+            if (passo === 0) {
+                vTemp = val;
+                document.getElementById('pergunta').innerHTML = `Lançando para ${new Date(dataSel).toLocaleDateString()}. <br>Quantas <strong>perdas</strong>?`;
+                passo = 1; inp.value = '';
+            } else {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                setTimeout(() => {
+                    const liq = vTemp - val;
+                    const novo = { id: Date.now(), data: dataSel, v: vTemp, p: val, l: liq, t: liq * PRECO };
+                    db.push(novo);
+                    saveToDB(novo);
+                    passo = 0; inp.value = '';
+                    document.getElementById('pergunta').innerHTML = `Quantos pães <strong>vieram</strong>?`;
+                    render();
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                }, 600);
+            }
+        }
+
+        function render() {
+            const lista = document.getElementById('corpoTabela');
+            const fMes = document.getElementById('filtroMes').value;
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+
+            lista.innerHTML = '';
+            let tv=0, tp=0, tl=0, tt=0;
+
+            db.sort((a,b) => new Date(b.data) - new Date(a.data)).forEach(i => {
+                const dataItem = new Date(i.data + "T00:00:00");
+                
+                if (dataItem.getMonth() === mesAtual && dataItem.getFullYear() === anoAtual) {
+                    tv+=i.v; tp+=i.p; tl+=i.l; tt+=i.t;
+                }
+
+                if (fMes === "" || dataItem.getMonth() == fMes) {
+                    lista.innerHTML += `<tr class="text-sm">
+                        <td class="p-6 text-gray-400 font-medium">${dataItem.toLocaleDateString('pt-BR')}</td>
+                        <td class="p-6 font-bold text-zinc-800">${i.v}</td>
+                        <td class="p-6 text-red-500 font-medium">-${i.p}</td>
+                        <td class="p-6 font-bold text-black">R$ ${i.t.toFixed(2)}</td>
+                        <td class="p-6 text-right"><button onclick="del(${i.id})" class="text-gray-200 hover:text-red-500">✕</button></td>
+                    </tr>`;
+                }
+            });
+
+            document.getElementById('dashV').innerText = tv;
+            document.getElementById('dashP').innerText = tp;
+            document.getElementById('dashL').innerText = tl;
+            document.getElementById('dashT').innerText = `R$ ${tt.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+        }
+
+        function del(id) {
+            if(confirm("Apagar registro?")) {
+                db = db.filter(i => i.id !== id);
+                deleteFromDB(id);
+                render();
+            }
+        }
+
+        function exportar() {
+            const ws = XLSX.utils.json_to_sheet(db);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Lumin_Export");
+            XLSX.writeFile(wb, "Relatorio_Lumin.xlsx");
+        }
+
+        // --- IMPORTAÇÃO EXCEL ---
+        const fileInp = document.getElementById('fileInp');
+        fileInp.addEventListener('change', e => {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            const r = new FileReader();
+            r.onload = ev => {
+                const data = new Uint8Array(ev.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                rows.forEach(row => {
+                    const novo = { 
+                        id: Date.now() + Math.random(), 
+                        data: row.Data || new Date().toISOString().split('T')[0], 
+                        v: row.Vieram || 0, p: row.Perdas || 0, 
+                        l: (row.Vieram || 0) - (row.Perdas || 0), 
+                        t: ((row.Vieram || 0) - (row.Perdas || 0)) * PRECO 
+                    };
+                    db.push(novo);
+                    saveToDB(novo);
+                });
+                render();
+                document.getElementById('loadingOverlay').style.display = 'none';
+            };
+            r.readAsArrayBuffer(e.target.files[0]);
+        });
+
+        // Atalho Enter
+        document.getElementById('inputChat').addEventListener('keyup', e => { if(e.key === "Enter") proximo(); });
+        document.getElementById('pass').addEventListener('keyup', e => { if(e.key === "Enter") checkLogin(); });
+
+    </script>
+</body>
+</html>
